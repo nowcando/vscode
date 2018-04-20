@@ -1908,3 +1908,11 @@ export class FoldingRangeKind {
 }
 
 //#endregion
+//#region terminal
+
+export enum TerminalType {
+	Interactive = 0,
+	Task = 1
+}
+
+//#endregion

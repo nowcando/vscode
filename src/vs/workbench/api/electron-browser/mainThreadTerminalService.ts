@@ -92,7 +92,7 @@ export class MainThreadTerminalService implements MainThreadTerminalServiceShape
 	}
 
 	private _onTerminalOpened(terminalInstance: ITerminalInstance): void {
-		this._proxy.$acceptTerminalOpened(terminalInstance.id, terminalInstance.title);
+		this._proxy.$acceptTerminalOpened(terminalInstance.id, terminalInstance.title, terminalInstance.shellLaunchConfig.isTask);
 	}
 
 	private _onTerminalProcessIdReady(terminalInstance: ITerminalInstance): void {

@@ -15,9 +15,11 @@ import { ExtHostTerminalServiceShape, MainContext, MainThreadTerminalServiceShap
 import { IMessageFromTerminalProcess } from 'vs/workbench/parts/terminal/node/terminal';
 import { ExtHostConfiguration } from 'vs/workbench/api/node/extHostConfiguration';
 import { ILogService } from 'vs/platform/log/common/log';
+import { TerminalType } from 'vs/workbench/api/node/extHostTypes';
 
 export class ExtHostTerminal implements vscode.Terminal {
 	private _name: string;
+	private _type: TerminalType;
 	private _id: number;
 	private _proxy: MainThreadTerminalServiceShape;
 	private _disposed: boolean;
@@ -28,10 +30,12 @@ export class ExtHostTerminal implements vscode.Terminal {
 	constructor(
 		proxy: MainThreadTerminalServiceShape,
 		name: string = '',
+		isTask: boolean = false,
 		id?: number
 	) {
 		this._proxy = proxy;
 		this._name = name;
+		this._type = isTask ? TerminalType.Task : TerminalType.Interactive;
 		if (id) {
 			this._id = id;
 		}
@@ -63,6 +67,10 @@ export class ExtHostTerminal implements vscode.Terminal {
 
 	public get processId(): Thenable<number> {
 		return this._pidPromise;
+	}
+
+	public get type(): TerminalType {
+		return this._type;
 	}
 
 	public sendText(text: string, addNewLine: boolean = true): void {
@@ -162,14 +170,14 @@ export class ExtHostTerminalService implements ExtHostTerminalServiceShape {
 		this._onDidCloseTerminal.fire(terminal);
 	}
 
-	public $acceptTerminalOpened(id: number, name: string): void {
+	public $acceptTerminalOpened(id: number, name: string, isTask: boolean = false): void {
 		let index = this._getTerminalIndexById(id);
 		if (index !== null) {
 			// The terminal has already been created (via createTerminal*), only fire the event
 			this._onDidOpenTerminal.fire(this.terminals[index]);
 			return;
 		}
-		let terminal = new ExtHostTerminal(this._proxy, name, id);
+		let terminal = new ExtHostTerminal(this._proxy, name, isTask, id);
 		this._terminals.push(terminal);
 		this._onDidOpenTerminal.fire(terminal);
 	}

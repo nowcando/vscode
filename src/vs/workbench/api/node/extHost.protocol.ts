@@ -744,7 +744,7 @@ export interface ShellLaunchConfigDto {
 
 export interface ExtHostTerminalServiceShape {
 	$acceptTerminalClosed(id: number): void;
-	$acceptTerminalOpened(id: number, name: string): void;
+	$acceptTerminalOpened(id: number, name: string, isTask: boolean): void;
 	$acceptTerminalProcessId(id: number, processId: number): void;
 	$createProcess(id: number, shellLaunchConfig: ShellLaunchConfigDto, cols: number, rows: number): void;
 	$acceptProcessInput(id: number, data: string): void;

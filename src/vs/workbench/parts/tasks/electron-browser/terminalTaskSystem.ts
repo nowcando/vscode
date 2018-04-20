@@ -451,7 +451,7 @@ export class TerminalTaskSystem implements ITaskSystem {
 			if (Platform.isWindows && ((options.cwd && TPath.isUNC(options.cwd)) || (!options.cwd && TPath.isUNC(process.cwd())))) {
 				throw new TaskError(Severity.Error, nls.localize('TerminalTaskSystem', 'Can\'t execute a shell command on an UNC drive.'), TaskErrors.UnknownError);
 			}
-			shellLaunchConfig = { name: terminalName, executable: null, args: null, waitOnExit };
+			shellLaunchConfig = { name: terminalName, executable: null, args: null, waitOnExit, isTask: true };
 			let shellSpecified: boolean = false;
 			let shellOptions: ShellConfiguration = task.command.options && task.command.options.shell;
 			if (shellOptions && shellOptions.executable) {
@@ -516,7 +516,8 @@ export class TerminalTaskSystem implements ITaskSystem {
 				name: terminalName,
 				executable: executable,
 				args: args.map(a => Types.isString(a) ? a : a.value),
-				waitOnExit
+				waitOnExit,
+				isTask: true
 			};
 			if (task.command.presentation.echo) {
 				let getArgsToEcho = (args: string | string[]): string => {

@@ -598,6 +598,18 @@ declare module 'vscode' {
 
 	//#region Terminal
 
+	export enum TerminalType {
+		Interactive = 0,
+		Task = 1
+	}
+
+	export interface Terminal {
+		/**
+		 * The type of terminal, indicating how it was launched.
+		 */
+		readonly type: TerminalType;
+	}
+
 	export namespace window {
 		/**
 		 * The currently active terminals or an empty array.

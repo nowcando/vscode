@@ -148,6 +148,11 @@ export interface IShellLaunchConfig {
 	 * of the terminal. Use \x1b over \033 or \e for the escape control character.
 	 */
 	initialText?: string;
+
+	/**
+	 * Whether the terminal was launched from the task system.
+	 */
+	isTask?: boolean;
 }
 
 export interface ITerminalService {

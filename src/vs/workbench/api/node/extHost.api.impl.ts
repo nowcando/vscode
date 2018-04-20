@@ -658,6 +658,7 @@ export function createApiFactory(
 			SymbolInformation: extHostTypes.SymbolInformation,
 			SymbolKind: extHostTypes.SymbolKind,
 			SourceControlInputBoxValidationType: extHostTypes.SourceControlInputBoxValidationType,
+			TerminalType: extHostTypes.TerminalType,
 			TextDocumentSaveReason: extHostTypes.TextDocumentSaveReason,
 			TextEdit: extHostTypes.TextEdit,
 			TextEditorCursorStyle: TextEditorCursorStyle,
