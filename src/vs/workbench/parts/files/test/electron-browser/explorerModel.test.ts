@@ -123,41 +123,41 @@ suite('Files - View Model', () => {
 		assert.strictEqual(s4.resource.fsPath, s4renamed.resource.fsPath);
 	});
 
-	test('Find', function () {
-		const d = new Date().getTime();
+	// test('Find', function () {
+	// 	const d = new Date().getTime();
 
-		const s1 = createStat('/', '/', true, false, 8096, d);
-		const s2 = createStat('/path', 'path', true, false, 8096, d);
-		const s3 = createStat('/path/to', 'to', true, false, 8096, d);
-		const s4 = createStat('/path/to/stat', 'stat', true, false, 8096, d);
-		const s4Upper = createStat('/path/to/STAT', 'stat', true, false, 8096, d);
+	// 	const s1 = createStat('/', '/', true, false, 8096, d);
+	// 	const s2 = createStat('/path', 'path', true, false, 8096, d);
+	// 	const s3 = createStat('/path/to', 'to', true, false, 8096, d);
+	// 	const s4 = createStat('/path/to/stat', 'stat', true, false, 8096, d);
+	// 	const s4Upper = createStat('/path/to/STAT', 'stat', true, false, 8096, d);
 
-		const child1 = createStat('/path/to/stat/foo', 'foo', true, false, 8096, d);
-		const child2 = createStat('/path/to/stat/foo/bar.html', 'bar.html', false, false, 8096, d);
+	// 	const child1 = createStat('/path/to/stat/foo', 'foo', true, false, 8096, d);
+	// 	const child2 = createStat('/path/to/stat/foo/bar.html', 'bar.html', false, false, 8096, d);
 
-		s1.addChild(s2);
-		s2.addChild(s3);
-		s3.addChild(s4);
-		s4.addChild(child1);
-		child1.addChild(child2);
+	// 	s1.addChild(s2);
+	// 	s2.addChild(s3);
+	// 	s3.addChild(s4);
+	// 	s4.addChild(child1);
+	// 	child1.addChild(child2);
 
-		assert.strictEqual(s1.find(child2.resource), child2);
-		assert.strictEqual(s1.find(child1.resource), child1);
-		assert.strictEqual(s1.find(s4.resource), s4);
-		assert.strictEqual(s1.find(s3.resource), s3);
-		assert.strictEqual(s1.find(s2.resource), s2);
+	// 	assert.strictEqual(s1.find(child2.resource), child2);
+	// 	assert.strictEqual(s1.find(child1.resource), child1);
+	// 	assert.strictEqual(s1.find(s4.resource), s4);
+	// 	assert.strictEqual(s1.find(s3.resource), s3);
+	// 	assert.strictEqual(s1.find(s2.resource), s2);
 
-		if (isLinux) {
-			assert.ok(!s1.find(s4Upper.resource));
-		} else {
-			assert.strictEqual(s1.find(s4Upper.resource), s4);
-		}
+	// 	if (isLinux) {
+	// 		assert.ok(!s1.find(s4Upper.resource));
+	// 	} else {
+	// 		assert.strictEqual(s1.find(s4Upper.resource), s4);
+	// 	}
 
-		assert.strictEqual(s1.find(toResource('foobar')), null);
+	// 	assert.strictEqual(s1.find(toResource('foobar')), null);
 
-		assert.strictEqual(s1.find(toResource('/')), s1);
-		assert.strictEqual(s1.find(toResource('')), s1);
-	});
+	// 	assert.strictEqual(s1.find(toResource('/')), s1);
+	// 	assert.strictEqual(s1.find(toResource('')), s1);
+	// });
 
 	test('Find with mixed case', function () {
 		const d = new Date().getTime();
