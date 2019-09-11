@@ -3,22 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as vscode from 'vscode';
 import * as Proto from '../protocol';
-import { MarkdownString } from 'vscode';
 
 function getTagBodyText(tag: Proto.JSDocTagInfo): string | undefined {
 	if (!tag.text) {
 		return undefined;
 	}
 
+	// Convert to markdown code block if it is not already one
+	function makeCodeblock(text: string): string {
+		if (text.match(/^\s*[~`]{3}/g)) {
+			return text;
+		}
+		return '```\n' + text + '\n```';
+	}
+
 	switch (tag.name) {
 		case 'example':
-		case 'default':
-			// Convert to markdown code block if it not already one
-			if (tag.text.match(/^\s*[~`]{3}/g)) {
-				return tag.text;
+			// check for caption tags, fix for #79704
+			const captionTagMatches = tag.text.match(/<caption>(.*?)<\/caption>\s*(\r\n|\n)/);
+			if (captionTagMatches && captionTagMatches.index === 0) {
+				return captionTagMatches[1] + '\n\n' + makeCodeblock(tag.text.substr(captionTagMatches[0].length));
+			} else {
+				return makeCodeblock(tag.text);
 			}
-			return '```\n' + tag.text + '\n```';
+
+		case 'default':
+			return makeCodeblock(tag.text);
 	}
 
 	return tag.text;
@@ -27,7 +39,7 @@ function getTagBodyText(tag: Proto.JSDocTagInfo): string | undefined {
 function getTagDocumentation(tag: Proto.JSDocTagInfo): string | undefined {
 	switch (tag.name) {
 		case 'param':
-			const body = (tag.text || '').split(/^([\w\.]+)\s*/);
+			const body = (tag.text || '').split(/^([\w\.]+)\s*-?\s*/);
 			if (body && body.length === 3) {
 				const param = body[1];
 				const doc = body[2];
@@ -64,21 +76,26 @@ export function tagsMarkdownPreview(tags: Proto.JSDocTagInfo[]): string {
 export function markdownDocumentation(
 	documentation: Proto.SymbolDisplayPart[],
 	tags: Proto.JSDocTagInfo[]
-): MarkdownString {
-	const out = new MarkdownString();
+): vscode.MarkdownString {
+	const out = new vscode.MarkdownString();
 	addMarkdownDocumentation(out, documentation, tags);
 	return out;
 }
 
 export function addMarkdownDocumentation(
-	out: MarkdownString,
-	documentation: Proto.SymbolDisplayPart[],
-	tags: Proto.JSDocTagInfo[]
-): MarkdownString {
-	out.appendMarkdown(plain(documentation));
-	const tagsPreview = tagsMarkdownPreview(tags);
-	if (tagsPreview) {
-		out.appendMarkdown('\n\n' + tagsPreview);
+	out: vscode.MarkdownString,
+	documentation: Proto.SymbolDisplayPart[] | undefined,
+	tags: Proto.JSDocTagInfo[] | undefined
+): vscode.MarkdownString {
+	if (documentation) {
+		out.appendMarkdown(plain(documentation));
+	}
+
+	if (tags) {
+		const tagsPreview = tagsMarkdownPreview(tags);
+		if (tagsPreview) {
+			out.appendMarkdown('\n\n' + tagsPreview);
+		}
 	}
 	return out;
 }

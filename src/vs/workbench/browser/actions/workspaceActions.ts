@@ -3,22 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
-import { TPromise } from 'vs/base/common/winjs.base';
 import { Action } from 'vs/base/common/actions';
 import * as nls from 'vs/nls';
-import { IWindowService, IWindowsService } from 'vs/platform/windows/common/windows';
+import { IWindowService } from 'vs/platform/windows/common/windows';
 import { ITelemetryData } from 'vs/platform/telemetry/common/telemetry';
 import { IWorkspaceContextService, WorkbenchState, IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
-import { WORKSPACE_FILTER, IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
-import { IEnvironmentService } from 'vs/platform/environment/common/environment';
-import { mnemonicButtonLabel } from 'vs/base/common/labels';
-import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { ICommandService } from 'vs/platform/commands/common/commands';
-import { IHistoryService } from 'vs/workbench/services/history/common/history';
-import { ADD_ROOT_FOLDER_COMMAND_ID, ADD_ROOT_FOLDER_LABEL, PICK_WORKSPACE_FOLDER_COMMAND_ID, defaultWorkspacePath, defaultFilePath, defaultFolderPath } from 'vs/workbench/browser/actions/workspaceCommands';
+import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
+import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
+import { ICommandService, ICommandHandler, CommandsRegistry } from 'vs/platform/commands/common/commands';
+import { ADD_ROOT_FOLDER_COMMAND_ID, ADD_ROOT_FOLDER_LABEL, PICK_WORKSPACE_FOLDER_COMMAND_ID } from 'vs/workbench/browser/actions/workspaceCommands';
+import { IFileDialogService } from 'vs/platform/dialogs/common/dialogs';
+import { INotificationService } from 'vs/platform/notification/common/notification';
+import { Schemas } from 'vs/base/common/network';
+import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
+import { ITextFileService, ISaveOptions } from 'vs/workbench/services/textfile/common/textfiles';
+import { toResource } from 'vs/workbench/common/editor';
+import { URI } from 'vs/base/common/uri';
+import { MenuRegistry, MenuId } from 'vs/platform/actions/common/actions';
+import { WorkbenchStateContext } from 'vs/workbench/browser/contextkeys';
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 
 export class OpenFileAction extends Action {
 
@@ -28,15 +32,43 @@ export class OpenFileAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@IWindowService private windowService: IWindowService,
-		@IHistoryService private historyService: IHistoryService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService
+		@IFileDialogService private readonly dialogService: IFileDialogService
 	) {
 		super(id, label);
 	}
 
-	run(event?: any, data?: ITelemetryData): TPromise<any> {
-		return this.windowService.pickFileAndOpen({ telemetryExtraData: data, dialogOptions: { defaultPath: defaultFilePath(this.contextService, this.historyService) } });
+	run(event?: any, data?: ITelemetryData): Promise<any> {
+		return this.dialogService.pickFileAndOpen({ forceNewWindow: false, telemetryExtraData: data });
+	}
+}
+
+export namespace OpenLocalFileCommand {
+	export const ID = 'workbench.action.files.openLocalFile';
+	export const LABEL = nls.localize('openLocalFile', "Open Local File...");
+
+	export function handler(): ICommandHandler {
+		return accessor => {
+			const dialogService = accessor.get(IFileDialogService);
+			return dialogService.pickFileAndOpen({ forceNewWindow: false, availableFileSystems: [Schemas.file] });
+		};
+	}
+}
+
+export namespace SaveLocalFileCommand {
+	export const ID = 'workbench.action.files.saveLocalFile';
+	export const LABEL = nls.localize('saveLocalFile', "Save Local File...");
+
+	export function handler(): ICommandHandler {
+		return accessor => {
+			const textFileService = accessor.get(ITextFileService);
+			const editorService = accessor.get(IEditorService);
+			let resource: URI | undefined = toResource(editorService.activeEditor);
+			const options: ISaveOptions = { force: true, availableFileSystems: [Schemas.file] };
+			if (resource) {
+				return textFileService.saveAs(resource, undefined, options);
+			}
+			return Promise.resolve(undefined);
+		};
 	}
 }
 
@@ -48,17 +80,28 @@ export class OpenFolderAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@IWindowService private windowService: IWindowService,
-		@IHistoryService private historyService: IHistoryService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService
+		@IFileDialogService private readonly dialogService: IFileDialogService
 	) {
 		super(id, label);
 	}
 
-	run(event?: any, data?: ITelemetryData): TPromise<any> {
-		return this.windowService.pickFolderAndOpen({ telemetryExtraData: data, dialogOptions: { defaultPath: defaultFolderPath(this.contextService, this.historyService) } });
+	run(event?: any, data?: ITelemetryData): Promise<any> {
+		return this.dialogService.pickFolderAndOpen({ forceNewWindow: false, telemetryExtraData: data });
 	}
 }
+
+export namespace OpenLocalFolderCommand {
+	export const ID = 'workbench.action.files.openLocalFolder';
+	export const LABEL = nls.localize('openLocalFolder', "Open Local Folder...");
+
+	export function handler(): ICommandHandler {
+		return accessor => {
+			const dialogService = accessor.get(IFileDialogService);
+			return dialogService.pickFolderAndOpen({ forceNewWindow: false, availableFileSystems: [Schemas.file] });
+		};
+	}
+}
+
 
 export class OpenFileFolderAction extends Action {
 
@@ -68,15 +111,26 @@ export class OpenFileFolderAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@IWindowService private windowService: IWindowService,
-		@IHistoryService private historyService: IHistoryService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService
+		@IFileDialogService private readonly dialogService: IFileDialogService
 	) {
 		super(id, label);
 	}
 
-	run(event?: any, data?: ITelemetryData): TPromise<any> {
-		return this.windowService.pickFileFolderAndOpen({ telemetryExtraData: data, dialogOptions: { defaultPath: defaultFilePath(this.contextService, this.historyService) } });
+	run(event?: any, data?: ITelemetryData): Promise<any> {
+		return this.dialogService.pickFileFolderAndOpen({ forceNewWindow: false, telemetryExtraData: data });
+	}
+}
+
+export namespace OpenLocalFileFolderCommand {
+
+	export const ID = 'workbench.action.files.openLocalFileFolder';
+	export const LABEL = nls.localize('openLocalFileFolder', "Open Local...");
+
+	export function handler(): ICommandHandler {
+		return accessor => {
+			const dialogService = accessor.get(IFileDialogService);
+			return dialogService.pickFileFolderAndOpen({ forceNewWindow: false, availableFileSystems: [Schemas.file] });
+		};
 	}
 }
 
@@ -88,12 +142,12 @@ export class AddRootFolderAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@ICommandService private commandService: ICommandService
+		@ICommandService private readonly commandService: ICommandService
 	) {
 		super(id, label);
 	}
 
-	public run(): TPromise<any> {
+	run(): Promise<any> {
 		return this.commandService.executeCommand(ADD_ROOT_FOLDER_COMMAND_ID);
 	}
 }
@@ -106,28 +160,25 @@ export class GlobalRemoveRootFolderAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@ICommandService private commandService: ICommandService
+		@IWorkspaceEditingService private readonly workspaceEditingService: IWorkspaceEditingService,
+		@IWorkspaceContextService private readonly contextService: IWorkspaceContextService,
+		@ICommandService private readonly commandService: ICommandService
 	) {
 		super(id, label);
 	}
 
-	public run(): TPromise<any> {
+	async run(): Promise<any> {
 		const state = this.contextService.getWorkbenchState();
 
 		// Workspace / Folder
 		if (state === WorkbenchState.WORKSPACE || state === WorkbenchState.FOLDER) {
-			return this.commandService.executeCommand<IWorkspaceFolder>(PICK_WORKSPACE_FOLDER_COMMAND_ID).then(folder => {
-				if (folder) {
-					return this.workspaceEditingService.removeFolders([folder.uri]).then(() => true);
-				}
-
-				return true;
-			});
+			const folder = await this.commandService.executeCommand<IWorkspaceFolder>(PICK_WORKSPACE_FOLDER_COMMAND_ID);
+			if (folder) {
+				await this.workspaceEditingService.removeFolders([folder.uri]);
+			}
 		}
 
-		return TPromise.as(true);
+		return true;
 	}
 }
 
@@ -139,40 +190,25 @@ export class SaveWorkspaceAsAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@IWindowService private windowService: IWindowService,
-		@IEnvironmentService private environmentService: IEnvironmentService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
-		@IHistoryService private historyService: IHistoryService
+		@IWorkspaceContextService private readonly contextService: IWorkspaceContextService,
+		@IWorkspaceEditingService private readonly workspaceEditingService: IWorkspaceEditingService
+
 	) {
 		super(id, label);
 	}
 
-	public run(): TPromise<any> {
-		return this.getNewWorkspaceConfigPath().then(configPath => {
-			if (configPath) {
-				switch (this.contextService.getWorkbenchState()) {
-					case WorkbenchState.EMPTY:
-					case WorkbenchState.FOLDER:
-						const folders = this.contextService.getWorkspace().folders.map(folder => ({ uri: folder.uri }));
-						return this.workspaceEditingService.createAndEnterWorkspace(folders, configPath);
-
-					case WorkbenchState.WORKSPACE:
-						return this.workspaceEditingService.saveAndEnterWorkspace(configPath);
-				}
+	async run(): Promise<any> {
+		const configPathUri = await this.workspaceEditingService.pickNewWorkspacePath();
+		if (configPathUri) {
+			switch (this.contextService.getWorkbenchState()) {
+				case WorkbenchState.EMPTY:
+				case WorkbenchState.FOLDER:
+					const folders = this.contextService.getWorkspace().folders.map(folder => ({ uri: folder.uri }));
+					return this.workspaceEditingService.createAndEnterWorkspace(folders, configPathUri);
+				case WorkbenchState.WORKSPACE:
+					return this.workspaceEditingService.saveAndEnterWorkspace(configPathUri);
 			}
-
-			return null;
-		});
-	}
-
-	private getNewWorkspaceConfigPath(): TPromise<string> {
-		return this.windowService.showSaveDialog({
-			buttonLabel: mnemonicButtonLabel(nls.localize({ key: 'save', comment: ['&& denotes a mnemonic'] }, "&&Save")),
-			title: nls.localize('saveWorkspace', "Save Workspace"),
-			filters: WORKSPACE_FILTER,
-			defaultPath: defaultWorkspacePath(this.contextService, this.historyService, this.environmentService)
-		});
+		}
 	}
 }
 
@@ -184,79 +220,107 @@ export class OpenWorkspaceAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@IWindowService private windowService: IWindowService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@IHistoryService private historyService: IHistoryService,
-		@IEnvironmentService private environmentService: IEnvironmentService
+		@IFileDialogService private readonly dialogService: IFileDialogService
 	) {
 		super(id, label);
 	}
 
-	public run(event?: any, data?: ITelemetryData): TPromise<any> {
-		return this.windowService.pickWorkspaceAndOpen({ telemetryExtraData: data, dialogOptions: { defaultPath: defaultWorkspacePath(this.contextService, this.historyService, this.environmentService) } });
+	run(event?: any, data?: ITelemetryData): Promise<any> {
+		return this.dialogService.pickWorkspaceAndOpen({ telemetryExtraData: data });
+	}
+}
+
+export class CloseWorkspaceAction extends Action {
+
+	static readonly ID = 'workbench.action.closeFolder';
+	static LABEL = nls.localize('closeWorkspace', "Close Workspace");
+
+	constructor(
+		id: string,
+		label: string,
+		@IWorkspaceContextService private readonly contextService: IWorkspaceContextService,
+		@INotificationService private readonly notificationService: INotificationService,
+		@IWindowService private readonly windowService: IWindowService
+	) {
+		super(id, label);
+	}
+
+	run(): Promise<void> {
+		if (this.contextService.getWorkbenchState() === WorkbenchState.EMPTY) {
+			this.notificationService.info(nls.localize('noWorkspaceOpened', "There is currently no workspace opened in this instance to close."));
+
+			return Promise.resolve(undefined);
+		}
+
+		return this.windowService.closeWorkspace();
 	}
 }
 
 export class OpenWorkspaceConfigFileAction extends Action {
 
-	public static readonly ID = 'workbench.action.openWorkspaceConfigFile';
-	public static readonly LABEL = nls.localize('openWorkspaceConfigFile', "Open Workspace Configuration File");
+	static readonly ID = 'workbench.action.openWorkspaceConfigFile';
+	static readonly LABEL = nls.localize('openWorkspaceConfigFile', "Open Workspace Configuration File");
 
 	constructor(
 		id: string,
 		label: string,
-		@IWorkspaceContextService private workspaceContextService: IWorkspaceContextService,
-		@IWorkbenchEditorService private editorService: IWorkbenchEditorService
+		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
+		@IEditorService private readonly editorService: IEditorService
 	) {
 		super(id, label);
 
 		this.enabled = !!this.workspaceContextService.getWorkspace().configuration;
 	}
 
-	public run(): TPromise<any> {
-		return this.editorService.openEditor({ resource: this.workspaceContextService.getWorkspace().configuration });
+	run(): Promise<any> {
+		const configuration = this.workspaceContextService.getWorkspace().configuration;
+		if (configuration) {
+			return this.editorService.openEditor({ resource: configuration });
+		}
+		return Promise.resolve();
 	}
 }
 
-export class OpenFolderAsWorkspaceInNewWindowAction extends Action {
+export class DuplicateWorkspaceInNewWindowAction extends Action {
 
-	public static readonly ID = 'workbench.action.openFolderAsWorkspaceInNewWindow';
-	public static readonly LABEL = nls.localize('openFolderAsWorkspaceInNewWindow', "Open Folder as Workspace in New Window");
+	static readonly ID = 'workbench.action.duplicateWorkspaceInNewWindow';
+	static readonly LABEL = nls.localize('duplicateWorkspaceInNewWindow', "Duplicate Workspace in New Window");
 
 	constructor(
 		id: string,
 		label: string,
-		@IWorkspaceContextService private workspaceContextService: IWorkspaceContextService,
-		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
-		@IWindowsService private windowsService: IWindowsService,
-		@ICommandService private commandService: ICommandService,
-		@IWorkspacesService private workspacesService: IWorkspacesService
+		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
+		@IWorkspaceEditingService private readonly workspaceEditingService: IWorkspaceEditingService,
+		@IWindowService private readonly windowService: IWindowService,
+		@IWorkspacesService private readonly workspacesService: IWorkspacesService,
+		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService
 	) {
 		super(id, label);
 	}
 
-	public run(): TPromise<any> {
+	async run(): Promise<any> {
 		const folders = this.workspaceContextService.getWorkspace().folders;
+		const remoteAuthority = this.environmentService.configuration.remoteAuthority;
 
-		let folderPromise: TPromise<IWorkspaceFolder>;
-		if (folders.length === 0) {
-			folderPromise = TPromise.as(null);
-		} else if (folders.length === 1) {
-			folderPromise = TPromise.as(folders[0]);
-		} else {
-			folderPromise = this.commandService.executeCommand<IWorkspaceFolder>(PICK_WORKSPACE_FOLDER_COMMAND_ID);
-		}
+		const newWorkspace = await this.workspacesService.createUntitledWorkspace(folders, remoteAuthority);
+		await this.workspaceEditingService.copyWorkspaceSettings(newWorkspace);
 
-		return folderPromise.then(folder => {
-			if (!folder) {
-				return void 0; // need at least one folder
-			}
-
-			return this.workspacesService.createWorkspace([{ uri: folder.uri }]).then(newWorkspace => {
-				return this.workspaceEditingService.copyWorkspaceSettings(newWorkspace).then(() => {
-					return this.windowsService.openWindow([newWorkspace.configPath], { forceNewWindow: true });
-				});
-			});
-		});
+		return this.windowService.openWindow([{ workspaceUri: newWorkspace.configPath }], { forceNewWindow: true });
 	}
 }
+
+// --- Menu Registration
+
+const workspacesCategory = nls.localize('workspaces', "Workspaces");
+
+CommandsRegistry.registerCommand(OpenWorkspaceConfigFileAction.ID, serviceAccessor => {
+	serviceAccessor.get(IInstantiationService).createInstance(OpenWorkspaceConfigFileAction, OpenWorkspaceConfigFileAction.ID, OpenWorkspaceConfigFileAction.LABEL).run();
+});
+
+MenuRegistry.appendMenuItem(MenuId.CommandPalette, {
+	command: {
+		id: OpenWorkspaceConfigFileAction.ID,
+		title: { value: `${workspacesCategory}: ${OpenWorkspaceConfigFileAction.LABEL}`, original: 'Workspaces: Open Workspace Configuration File' },
+	},
+	when: WorkbenchStateContext.isEqualTo('workspace')
+});

@@ -3,15 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Application } from '../../application';
-import { ActivityBarPosition } from '../activitybar/activityBar';
+import { Application, ActivityBarPosition } from 'vscode-automation';
 
 export function setup() {
 	describe('Preferences', () => {
 		it('turns off editor line numbers and verifies the live change', async function () {
 			const app = this.app as Application;
 
-			await app.workbench.explorer.openFile('app.js');
+			await app.workbench.quickopen.openFile('app.js');
 			await app.code.waitForElements('.line-numbers', false, elements => !!elements.length);
 
 			await app.workbench.settingsEditor.addUserSetting('editor.lineNumbers', '"off"');

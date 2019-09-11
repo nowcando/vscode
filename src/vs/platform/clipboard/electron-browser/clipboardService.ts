@@ -3,30 +3,30 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
 import { clipboard } from 'electron';
-import URI from 'vs/base/common/uri';
+import { URI } from 'vs/base/common/uri';
 import { isMacintosh } from 'vs/base/common/platform';
-import { Schemas } from 'vs/base/common/network';
 
 export class ClipboardService implements IClipboardService {
 
-	// Clipboard format for files
-	private static FILE_FORMAT = 'code/file-list';
+	private static FILE_FORMAT = 'code/file-list'; // Clipboard format for files
 
-	_serviceBrand: any;
+	_serviceBrand: undefined;
 
-	public writeText(text: string): void {
-		clipboard.writeText(text);
+	async writeText(text: string, type?: 'selection' | 'clipboard'): Promise<void> {
+		clipboard.writeText(text, type);
 	}
 
-	public readText(): string {
+	async readText(type?: 'selection' | 'clipboard'): Promise<string> {
+		return clipboard.readText(type);
+	}
+
+	readTextSync(): string {
 		return clipboard.readText();
 	}
 
-	public readFindText(): string {
+	readFindText(): string {
 		if (isMacintosh) {
 			return clipboard.readFindText();
 		}
@@ -34,33 +34,31 @@ export class ClipboardService implements IClipboardService {
 		return '';
 	}
 
-	public writeFindText(text: string): void {
+	writeFindText(text: string): void {
 		if (isMacintosh) {
 			clipboard.writeFindText(text);
 		}
 	}
 
-	public writeFiles(resources: URI[]): void {
-		const files = resources.filter(f => f.scheme === Schemas.file);
-
-		if (files.length) {
-			clipboard.writeBuffer(ClipboardService.FILE_FORMAT, this.filesToBuffer(files));
+	writeResources(resources: URI[]): void {
+		if (resources.length) {
+			clipboard.writeBuffer(ClipboardService.FILE_FORMAT, this.resourcesToBuffer(resources));
 		}
 	}
 
-	public readFiles(): URI[] {
-		return this.bufferToFiles(clipboard.readBuffer(ClipboardService.FILE_FORMAT));
+	readResources(): URI[] {
+		return this.bufferToResources(clipboard.readBuffer(ClipboardService.FILE_FORMAT));
 	}
 
-	public hasFiles(): boolean {
+	hasResources(): boolean {
 		return clipboard.has(ClipboardService.FILE_FORMAT);
 	}
 
-	private filesToBuffer(resources: URI[]): Buffer {
-		return Buffer.from(resources.map(r => r.fsPath).join('\n'));
+	private resourcesToBuffer(resources: URI[]): Buffer {
+		return Buffer.from(resources.map(r => r.toString()).join('\n'));
 	}
 
-	private bufferToFiles(buffer: Buffer): URI[] {
+	private bufferToResources(buffer: Buffer): URI[] {
 		if (!buffer) {
 			return [];
 		}
@@ -71,7 +69,7 @@ export class ClipboardService implements IClipboardService {
 		}
 
 		try {
-			return bufferValue.split('\n').map(f => URI.file(f));
+			return bufferValue.split('\n').map(f => URI.parse(f));
 		} catch (error) {
 			return []; // do not trust clipboard data
 		}

@@ -2,19 +2,17 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
-
 import * as assert from 'assert';
 import { Selection } from 'vs/editor/common/core/selection';
+import { TokenizationResult2 } from 'vs/editor/common/core/token';
+import * as modes from 'vs/editor/common/modes';
+import { CommentRule } from 'vs/editor/common/modes/languageConfiguration';
+import { LanguageConfigurationRegistry } from 'vs/editor/common/modes/languageConfigurationRegistry';
+import { NULL_STATE } from 'vs/editor/common/modes/nullMode';
 import { ILinePreflightData, IPreflightData, ISimpleModel, LineCommentCommand, Type } from 'vs/editor/contrib/comment/lineCommentCommand';
 import { testCommand } from 'vs/editor/test/browser/testCommand';
 import { CommentMode } from 'vs/editor/test/common/commentMode';
-import * as modes from 'vs/editor/common/modes';
-import { NULL_STATE } from 'vs/editor/common/modes/nullMode';
-import { TokenizationResult2 } from 'vs/editor/common/core/token';
 import { MockMode } from 'vs/editor/test/common/mocks/mockMode';
-import { CommentRule } from 'vs/editor/common/modes/languageConfiguration';
-import { LanguageConfigurationRegistry } from 'vs/editor/common/modes/languageConfigurationRegistry';
 
 suite('Editor Contrib - Line Comment Command', () => {
 
@@ -74,7 +72,7 @@ suite('Editor Contrib - Line Comment Command', () => {
 
 	function createBasicLinePreflightData(commentTokens: string[]): ILinePreflightData[] {
 		return commentTokens.map((commentString) => {
-			var r: ILinePreflightData = {
+			const r: ILinePreflightData = {
 				ignore: false,
 				commentStr: commentString,
 				commentStrOffset: 0,
@@ -84,8 +82,8 @@ suite('Editor Contrib - Line Comment Command', () => {
 		});
 	}
 
-	test('_analyzeLines', function () {
-		var r: IPreflightData;
+	test('_analyzeLines', () => {
+		let r: IPreflightData;
 
 		r = LineCommentCommand._analyzeLines(Type.Toggle, createSimpleModel([
 			'\t\t',
@@ -93,6 +91,9 @@ suite('Editor Contrib - Line Comment Command', () => {
 			'    c',
 			'\t\td'
 		]), createBasicLinePreflightData(['//', 'rem', '!@#', '!@#']), 1);
+		if (!r.supported) {
+			throw new Error(`unexpected`);
+		}
 
 		assert.equal(r.shouldRemoveComments, false);
 
@@ -121,6 +122,9 @@ suite('Editor Contrib - Line Comment Command', () => {
 			'    !@# c',
 			'\t\t!@#d'
 		]), createBasicLinePreflightData(['//', 'rem', '!@#', '!@#']), 1);
+		if (!r.supported) {
+			throw new Error(`unexpected`);
+		}
 
 		assert.equal(r.shouldRemoveComments, true);
 
@@ -149,18 +153,18 @@ suite('Editor Contrib - Line Comment Command', () => {
 		assert.equal(r.lines[3].commentStrLength, 3);
 	});
 
-	test('_normalizeInsertionPoint', function () {
+	test('_normalizeInsertionPoint', () => {
 
-		var runTest = (mixedArr: any[], tabSize: number, expected: number[], testName: string) => {
-			var model = createSimpleModel(mixedArr.filter((item, idx) => idx % 2 === 0));
-			var offsets = mixedArr.filter((item, idx) => idx % 2 === 1).map(offset => {
+		const runTest = (mixedArr: any[], tabSize: number, expected: number[], testName: string) => {
+			const model = createSimpleModel(mixedArr.filter((item, idx) => idx % 2 === 0));
+			const offsets = mixedArr.filter((item, idx) => idx % 2 === 1).map(offset => {
 				return {
 					commentStrOffset: offset,
 					ignore: false
 				};
 			});
 			LineCommentCommand._normalizeInsertionPoint(model, offsets, 1, tabSize);
-			var actual = offsets.map(item => item.commentStrOffset);
+			const actual = offsets.map(item => item.commentStrOffset);
 			assert.deepEqual(actual, expected, testName);
 		};
 
@@ -946,7 +950,9 @@ suite('Editor Contrib - Line Comment in mixed modes', () => {
 
 			this._register(modes.TokenizationRegistry.register(this.getLanguageIdentifier().language, {
 				getInitialState: (): modes.IState => NULL_STATE,
-				tokenize: undefined,
+				tokenize: () => {
+					throw new Error('not implemented');
+				},
 				tokenize2: (line: string, state: modes.IState): TokenizationResult2 => {
 					let languageId = (/^  /.test(line) ? INNER_LANGUAGE_ID : OUTER_LANGUAGE_ID);
 
@@ -980,7 +986,8 @@ suite('Editor Contrib - Line Comment in mixed modes', () => {
 			selection,
 			(sel) => new LineCommentCommand(sel, 4, Type.Toggle),
 			expectedLines,
-			expectedSelection
+			expectedSelection,
+			true
 		);
 		innerMode.dispose();
 		outerMode.dispose();

@@ -1,20 +1,54 @@
 # VS Code Smoke Test
 
-## How to run
+Make sure you are on **Node v10.x**.
 
-```
+### Run
+
+```bash
+# Install Dependencies and Compile
+yarn --cwd test/smoke
+
 # Dev
 yarn smoketest
 
 # Build
-yarn smoketest --build "path/to/code"
+yarn smoketest --build PATH_TO_NEW_BUILD_PARENT_FOLDER --stable-build PATH_TO_LAST_STABLE_BUILD_PARENT_FOLDER
+
+# Remote
+yarn smoketest --build PATH_TO_NEW_BUILD_PARENT_FOLDER --remote
 ```
 
-The script calls mocha, so all mocha arguments should work fine. For example, use `-f Git` to filter all tests except the `Git` tests.
+### Run for a release
 
-A `--verbose` flag can be used to log to the console all the low level driver calls make to Code.
+You must always run the smoketest version which matches the release you are testing. So, if you want to run the smoketest for a release build (e.g. `release/1.22`), you need that version of the smoke tests too:
 
-Screenshots can be captured when tests fail. In order to get them,you need to use the argument `--screenshots SCREENSHOT_DIR`.
+```bash
+git checkout release/1.22
+yarn --cwd test/smoke
+```
+
+In addition to the new build to be released you will need the previous stable build so that the smoketest can test the data migration.
+The recommended way to make these builds available for the smoketest is by downloading their archive version (\*.zip) and extracting
+them into two folders. Pass the folder paths to the smoketest as follows:
+
+```bash
+yarn smoketest --build PATH_TO_NEW_RELEASE_PARENT_FOLDER --stable-build PATH_TO_LAST_STABLE_RELEASE_PARENT_FOLDER
+```
+
+### Debug
+
+- `--verbose` logs all the low level driver calls made to Code;
+- `-f PATTERN` filters the tests to be run. You can also use pretty much any mocha argument;
+- `--screenshots SCREENSHOT_DIR` captures screenshots when tests fail.
+
+### Develop
+
+Start a watch task in `test/smoke`:
+
+```bash
+cd test/smoke
+yarn watch
+```
 
 ## Pitfalls
 

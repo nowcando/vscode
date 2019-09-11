@@ -4,6 +4,7 @@
 	"description": "%description%",
 	"version": "1.0.0",
 	"publisher": "vscode",
+	"license": "MIT",
 	"engines": { "vscode": "*" },
 	"scripts": {
 		"update-grammar": "node ./build/update-grammars.js"
@@ -11,13 +12,13 @@
 	"contributes": {
 		"languages": [{
 			"id": "c",
-			"extensions": [ ".c"],
+			"extensions": [ ".c", ".i"],
 			"aliases": [ "C", "c" ],
 			"configuration": "./language-configuration.json"
 		},
 		{
 			"id": "cpp",
-			"extensions": [ ".cpp", ".cc", ".cxx", ".hpp", ".hh", ".hxx", ".h", ".ino", ".inl", ".ipp" ],
+			"extensions": [ ".cpp", ".cc", ".cxx", ".c++", ".hpp", ".hh", ".hxx", ".h", ".ii", ".ino", ".inl", ".ipp", ".hpp.in", ".h.in" ],
 			"aliases": [ "C++", "Cpp", "cpp"],
 			"configuration": "./language-configuration.json"
 		}],
